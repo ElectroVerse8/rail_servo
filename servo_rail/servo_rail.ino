@@ -26,8 +26,8 @@ const float ACCEL_MM_S2 = 50.0;     // acceleration mm/s^2
 const float STEPS_PER_MM = (MOTOR_STEPS * MICROSTEPS) / SCREW_LEAD_MM;
 
 // Adjustable travel limits and Home1 location in centimeters
-float railMinCm  = -15.0;
-float railMaxCm  =  15.0;
+float railMinCm  = -12.5;
+float railMaxCm  =  12.0;
 float home1PosCm = -13.6;   // user-provided position of Home1
 
 // Web server for the control interface
@@ -139,7 +139,7 @@ void setup() {
   pinMode(SW1_PIN, INPUT_PULLUP);
   pinMode(SW2_PIN, INPUT_PULLUP);
   pinMode(SW3_PIN, INPUT_PULLUP);
-  digitalWrite(EN_PIN, LOW);   // enable driver
+  digitalWrite(EN_PIN, HIGH);   // enable driver
 
   // configure the stepper library
   stepper.setEnablePin(EN_PIN);
