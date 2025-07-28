@@ -119,15 +119,10 @@ void setup() {
   stepper.setAcceleration(ACCEL_MM_S2 * STEPS_PER_MM);
   stepper.setMaxSpeed(100 * STEPS_PER_MM); // default speed
 
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print('.');
-  }
-  Serial.println();
-  Serial.print("Connected to WiFi. IP: ");
-  Serial.println(WiFi.localIP());
+  WiFi.mode(WIFI_AP);
+  WiFi.softAP(ssid, password);
+  Serial.print("Access Point IP: ");
+  Serial.println(WiFi.softAPIP());
 
   MDNS.begin("servo_rail");
 
