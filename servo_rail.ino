@@ -40,6 +40,7 @@ const char index_html[] PROGMEM = R"rawliteral(
 <style>
 body{background:#e0f0ff;font-family:Arial;text-align:center;color:#024;}
 .slider{width:90%;margin:20px auto;}
+.marks{width:90%;margin:-10px auto 10px;display:flex;justify-content:space-between;font-size:12px;color:#024;}
 button{background:#028;color:#fff;padding:10px 20px;margin:5px;border:none;border-radius:5px;}
 .inc{display:flex;justify-content:center;align-items:center;margin:10px;}
 .inc label{margin:0 5px;}
@@ -47,8 +48,15 @@ button{background:#028;color:#fff;padding:10px 20px;margin:5px;border:none;borde
 </style>
 </head>
 <body>
+<h3>Position</h3>
 <div class='pos' id='posLabel'>0 cm</div>
-<input type='range' id='pos' min='-150' max='150' value='0' class='slider'>
+<input type='range' id='pos' min='-150' max='150' value='0' class='slider' list='posmarks'>
+<datalist id='posmarks'>
+  <option value='-150'></option>
+  <option value='0'></option>
+  <option value='150'></option>
+</datalist>
+<div class='marks'><span>-15</span><span>0</span><span>15</span></div>
 <div class='inc'>
 <button onclick='inc(-1)'>-</button>
 <label><input type='radio' name='step' value='1' checked>1mm</label>
@@ -56,6 +64,7 @@ button{background:#028;color:#fff;padding:10px 20px;margin:5px;border:none;borde
 <label><input type='radio' name='step' value='50'>50mm</label>
 <button onclick='inc(1)'>+</button>
 </div>
+<h3>Speed <span id='spdLabel'>50</span></h3>
 <input type='range' id='spd' min='1' max='100' value='50' class='slider'>
 <div>
 <button onclick='home(1)'>Home1</button>
@@ -66,10 +75,11 @@ button{background:#028;color:#fff;padding:10px 20px;margin:5px;border:none;borde
 let pos=document.getElementById('pos');
 let spd=document.getElementById('spd');
 let label=document.getElementById('posLabel');
+let spdLabel=document.getElementById('spdLabel');
 pos.oninput=()=>{update();};
+spd.oninput=()=>{spdLabel.innerHTML=spd.value; update();};
 function update(){
   let val=parseInt(pos.value);
-  if(Math.abs(val)<5) val=0;
   pos.value=val;
   label.innerHTML=(val/10)+' cm';
   fetch('/move?pos='+val+'&spd='+spd.value);
