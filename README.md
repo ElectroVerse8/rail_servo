@@ -11,10 +11,14 @@ Connect to the `rail_servo` network (password `123456789`) and open the access p
 
 ## Startup behavior
 
-When the ESP32 boots it performs a full homing sequence:
+The travel range and the location of switch&nbsp;1 are configurable in the
+firmware. When the ESP32 boots it performs a full homing sequence:
 
-1. It homes toward switch 1 to establish the negative end at −15&nbsp;cm.
-2. It then moves to find switch 2 and switch 3, storing their positions.
-3. After all switches are detected the current position is reset to zero and the web interface becomes available.
+1. It first seeks switch&nbsp;1 and assigns the configured `home1PosCm` value to
+   the current position.
+2. It then scans toward the positive end to record the positions of switches 2
+   and 3.
+3. Once switch&nbsp;3 (or the maximum range) is reached, that location becomes
+   position zero and the web interface becomes available.
 
 See `servo_rail.ino` for the firmware.
