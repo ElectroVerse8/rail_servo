@@ -14,7 +14,7 @@ const int DIR_PIN  = 12;
 const int EN_PIN   = 13;
 
 // Limit switch pins (active LOW)
-const int SW1_PIN = 25; // Home1 at -15 cm
+const int SW1_PIN = 25; // Home1
 const int SW2_PIN = 26; // Home2
 const int SW3_PIN = 27; // Home3
 
@@ -243,6 +243,7 @@ void runHoming(){
       while(!switchHit(SW1_PIN)) stepper.run();
       stepper.stop(); stepper.runToPosition();       // decelerate to stop
       stepper.setCurrentPosition(home1PosCm * 10 * STEPS_PER_MM); // known location
+      Serial.println(digitalRead(SW1_PIN));
       Serial.println("Home1 reached");
       homeState = NONE;
       break;
