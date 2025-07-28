@@ -25,6 +25,11 @@ const int MICROSTEPS = 16;          // driver microstepping
 const float ACCEL_MM_S2 = 50.0;     // acceleration mm/s^2
 const float STEPS_PER_MM = (MOTOR_STEPS * MICROSTEPS) / SCREW_LEAD_MM;
 
+// Adjustable travel limits and Home1 location in centimeters
+float railMinCm  = -15.0;
+float railMaxCm  =  15.0;
+float home1PosCm = -13.6;   // user-provided position of Home1
+
 // Web server for the control interface
 AsyncWebServer server(80);
 // Stepper object controlling the motor
@@ -34,7 +39,7 @@ AccelStepper stepper(AccelStepper::DRIVER, STEP_PIN, DIR_PIN);
 long home2Pos = 0;
 long home3Pos = 0;
 
-// HTML page served to the client
+// HTML page served to the client with placeholders for limits
 const char index_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
 <html>
@@ -53,13 +58,13 @@ button{background:#028;color:#fff;padding:10px 20px;margin:5px;border:none;borde
 <body>
 <h3>Position</h3>
 <div class='pos' id='posLabel'>0 cm</div>
-<input type='range' id='pos' min='-150' max='150' value='0' class='slider' list='posmarks'>
+<input type='range' id='pos' min='%MIN10%' max='%MAX10%' value='0' class='slider' list='posmarks'>
 <datalist id='posmarks'>
-  <option value='-150'></option>
+  <option value='%MIN10%'></option>
   <option value='0'></option>
-  <option value='150'></option>
+  <option value='%MAX10%'></option>
 </datalist>
-<div class='marks'><span>-15</span><span>0</span><span>15</span></div>
+<div class='marks'><span>%MIN%</span><span>0</span><span>%MAX%</span></div>
 <div class='inc'>
 <button onclick='inc(-1)'>-</button>
 <label><input type='radio' name='step' value='1' checked>1mm</label>
@@ -90,7 +95,7 @@ function update(){
 function inc(dir){
   let step=document.querySelector('input[name="step"]:checked').value;
   let v=parseInt(pos.value)+dir*step;
-  if(v>150)v=150;if(v<-150)v=-150;
+  if(v>%MAX10%)v=%MAX10%;if(v<%MIN10%)v=%MIN10%;
   pos.value=v;
   update();
 }
@@ -99,6 +104,18 @@ function home(n){fetch('/home?n='+n);}
 </body>
 </html>
 )rawliteral";
+
+// Build HTML page with current travel limits
+String getIndexHtml(){
+  String page = String(index_html);
+  int min10 = railMinCm * 10;
+  int max10 = railMaxCm * 10;
+  page.replace("%MIN10%", String(min10));
+  page.replace("%MAX10%", String(max10));
+  page.replace("%MIN%", String(railMinCm,1));
+  page.replace("%MAX%", String(railMaxCm,1));
+  return page;
+}
 
 // Start a homing sequence to switch n (1..3)
 void startHome(int n);
@@ -140,12 +157,15 @@ void setup() {
 
   // HTTP handlers for the control interface
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *req){
-    req->send_P(200, "text/html", index_html);
+    req->send(200, "text/html", getIndexHtml());
   });
   server.on("/move", HTTP_GET, [](AsyncWebServerRequest *req){
     if(req->hasParam("pos")) {
-      long pos = req->getParam("pos")->value().toInt();
-      stepper.moveTo(pos * STEPS_PER_MM / 10);
+      long pos = req->getParam("pos")->value().toInt(); // value in mm
+      long minmm = railMinCm * 10;
+      long maxmm = railMaxCm * 10;
+      pos = constrain(pos, minmm, maxmm);
+      stepper.moveTo(pos * STEPS_PER_MM);
       Serial.print("Move to ");
       Serial.println(pos);
     }
@@ -188,7 +208,7 @@ void loop() {
   // periodically report position and speed over Serial
   static unsigned long lastPrint = 0;
   if (millis() - lastPrint > 500) {
-    float poscm = stepper.currentPosition() * 1.0 / STEPS_PER_MM;
+    float poscm = stepper.currentPosition() / (STEPS_PER_MM * 10.0);
     float spd = stepper.speed() / STEPS_PER_MM;
     Serial.print("Pos: ");
     Serial.print(poscm, 2);
@@ -222,7 +242,7 @@ void runHoming(){
       stepper.move(-100000);                         // move left until hit
       while(!switchHit(SW1_PIN)) stepper.run();
       stepper.stop(); stepper.runToPosition();       // decelerate to stop
-      stepper.setCurrentPosition(-150 * STEPS_PER_MM / 10); // known location
+      stepper.setCurrentPosition(home1PosCm * 10 * STEPS_PER_MM); // known location
       Serial.println("Home1 reached");
       homeState = NONE;
       break;
