@@ -1,33 +1,36 @@
-#include <WiFi.h>
-#include <ESPmDNS.h>
+#include <WiFi.h>              // Wi-Fi connectivity
+#include <ESPmDNS.h>           // mDNS responder
 #include <AsyncTCP.h>
-#include <ESPAsyncWebServer.h>
-#include <AccelStepper.h>
+#include <ESPAsyncWebServer.h> // asynchronous web server
+#include <AccelStepper.h>      // stepper control library
 
-// WiFi credentials
+// Credentials for the Wi-Fi access point created by the ESP32
 const char* ssid = "rail_servo";
 const char* password = "123456789";
 
-// Stepper driver pins
+// Pins connected to the stepper driver
 const int STEP_PIN = 14;
 const int DIR_PIN  = 12;
 const int EN_PIN   = 13;
 
-// Limit switch pins
+// Limit switch pins (active LOW)
 const int SW1_PIN = 25; // Home1 at -15 cm
 const int SW2_PIN = 26; // Home2
 const int SW3_PIN = 27; // Home3
 
-// Motion parameters
+// Mechanical parameters for the linear rail
 const float SCREW_LEAD_MM = 5.0;    // mm per revolution
 const int MOTOR_STEPS = 200;        // full steps per rev
 const int MICROSTEPS = 16;          // driver microstepping
 const float ACCEL_MM_S2 = 50.0;     // acceleration mm/s^2
 const float STEPS_PER_MM = (MOTOR_STEPS * MICROSTEPS) / SCREW_LEAD_MM;
 
+// Web server for the control interface
 AsyncWebServer server(80);
+// Stepper object controlling the motor
 AccelStepper stepper(AccelStepper::DRIVER, STEP_PIN, DIR_PIN);
 
+// Positions of switch 2 and switch 3 after homing
 long home2Pos = 0;
 long home3Pos = 0;
 
@@ -97,35 +100,45 @@ function home(n){fetch('/home?n='+n);}
 </html>
 )rawliteral";
 
+// Start a homing sequence to switch n (1..3)
 void startHome(int n);
+// Execute one step of the homing state machine
 void runHoming();
 
+// Possible states during homing
 enum HomeState { NONE, SEEK1, SEEK2, SEEK3 };
+// Current homing state
 HomeState homeState = NONE;
 
 void setup() {
-  Serial.begin(115200);
-  delay(1000);
+  Serial.begin(115200);        // open serial port
+  delay(1000);                 // allow time for port to open
   Serial.println("Rail servo starting...");
+
+  // configure GPIOs for the stepper driver and switches
   pinMode(STEP_PIN, OUTPUT);
   pinMode(DIR_PIN, OUTPUT);
   pinMode(EN_PIN, OUTPUT);
   pinMode(SW1_PIN, INPUT_PULLUP);
   pinMode(SW2_PIN, INPUT_PULLUP);
   pinMode(SW3_PIN, INPUT_PULLUP);
-  digitalWrite(EN_PIN, LOW);
+  digitalWrite(EN_PIN, LOW);   // enable driver
 
+  // configure the stepper library
   stepper.setEnablePin(EN_PIN);
   stepper.setAcceleration(ACCEL_MM_S2 * STEPS_PER_MM);
   stepper.setMaxSpeed(100 * STEPS_PER_MM); // default speed
 
+  // start the Wi-Fi access point
   WiFi.mode(WIFI_AP);
   WiFi.softAP(ssid, password);
   Serial.print("Access Point IP: ");
   Serial.println(WiFi.softAPIP());
 
-  MDNS.begin("servo_rail");
+  // enable mDNS so the interface is reachable at http://rail_servo.local
+  MDNS.begin("rail_servo");
 
+  // HTTP handlers for the control interface
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *req){
     req->send_P(200, "text/html", index_html);
   });
@@ -134,9 +147,7 @@ void setup() {
       long pos = req->getParam("pos")->value().toInt();
       stepper.moveTo(pos * STEPS_PER_MM / 10);
       Serial.print("Move to ");
-      Serial.print(pos);
-      Serial.print(" speed ");
-      Serial.println(stepper.maxSpeed() / STEPS_PER_MM);
+      Serial.println(pos);
     }
     if(req->hasParam("spd")) {
       int spd = req->getParam("spd")->value().toInt();
@@ -153,27 +164,31 @@ void setup() {
     Serial.println(n);
     req->send(200, "text/plain", "Homing");
   });
-  server.begin();
+  server.begin();             // start web server
   Serial.println("Web server started");
 
-  startHome(1);       // Home1 at startup
+  // run full homing sequence on boot
+  startHome(1);
   while(homeState != NONE) runHoming();
-  startHome(2);       // move to detect switch2
+  startHome(2);
   while(homeState != NONE) runHoming();
-  startHome(3);       // move to detect switch3
+  startHome(3);
   while(homeState != NONE) runHoming();
-  stepper.setCurrentPosition(0);
+  stepper.setCurrentPosition(0);   // zero after homing
 }
 
 void loop() {
+  // run the current motion
   if(homeState == NONE) {
-    stepper.run();
+    stepper.run();            // normal movement
   } else {
-    runHoming();
+    runHoming();              // finish homing operation
   }
+
+  // periodically report position and speed over Serial
   static unsigned long lastPrint = 0;
   if (millis() - lastPrint > 500) {
-    float poscm = stepper.currentPosition() * 10.0 / STEPS_PER_MM / 10.0;
+    float poscm = stepper.currentPosition() * 1.0 / STEPS_PER_MM;
     float spd = stepper.speed() / STEPS_PER_MM;
     Serial.print("Pos: ");
     Serial.print(poscm, 2);
@@ -183,43 +198,47 @@ void loop() {
   }
 }
 
+// Returns true if the given limit switch is pressed
 bool switchHit(int pin){
   return digitalRead(pin) == LOW;
 }
 
+// Initiate homing toward switch n
 void startHome(int n){
   if(n==1) homeState = SEEK1;
   else if(n==2) homeState = SEEK2;
   else if(n==3) homeState = SEEK3;
   Serial.print("Starting homing ");
   Serial.println(n);
+  // slower speed for reliable homing
   stepper.setMaxSpeed(50 * STEPS_PER_MM);
   stepper.setAcceleration(ACCEL_MM_S2 * STEPS_PER_MM);
 }
 
+// Execute the homing state machine
 void runHoming(){
   switch(homeState){
-    case SEEK1:
-      stepper.move(-100000);
+    case SEEK1: // search for switch 1
+      stepper.move(-100000);                         // move left until hit
       while(!switchHit(SW1_PIN)) stepper.run();
-      stepper.stop(); stepper.runToPosition();
-      stepper.setCurrentPosition(-150 * STEPS_PER_MM / 10);
+      stepper.stop(); stepper.runToPosition();       // decelerate to stop
+      stepper.setCurrentPosition(-150 * STEPS_PER_MM / 10); // known location
       Serial.println("Home1 reached");
       homeState = NONE;
       break;
-    case SEEK2:
-      stepper.move(100000);
+    case SEEK2: // search for switch 2
+      stepper.move(100000);                          // move right
       while(!switchHit(SW2_PIN)) stepper.run();
       stepper.stop(); stepper.runToPosition();
-      home2Pos = stepper.currentPosition();
+      home2Pos = stepper.currentPosition();          // remember position
       Serial.println("Home2 reached");
       homeState = NONE;
       break;
-    case SEEK3:
+    case SEEK3: // search for switch 3
       stepper.move(100000);
       while(!switchHit(SW3_PIN)) stepper.run();
       stepper.stop(); stepper.runToPosition();
-      home3Pos = stepper.currentPosition();
+      home3Pos = stepper.currentPosition();          // remember position
       Serial.println("Home3 reached");
       homeState = NONE;
       break;
