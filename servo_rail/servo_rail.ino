@@ -81,6 +81,7 @@ button{background:#028;color:#fff;padding:10px 20px;margin:5px;border:none;borde
 <button onclick='home(1)'>Home1</button>
 <button onclick='home(2)'>Home2</button>
 <button onclick='home(3)'>Home3</button>
+<button onclick='homeAll()'>Home all</button>
 </div>
 <script>
 let pos=document.getElementById('pos');
@@ -103,6 +104,7 @@ function inc(dir){
   update();
 }
 function home(n){fetch('/home?n='+n);}
+function homeAll(){fetch('/homeall');}
 </script>
 </body>
 </html>
@@ -191,6 +193,10 @@ void setup() {
     Serial.println(n);
     req->send(200, "text/plain", "Homing");
   });
+  server.on("/homeall", HTTP_GET, [](AsyncWebServerRequest *req){
+    fullHoming();
+    req->send(200, "text/plain", "Full homing");
+  });
   server.begin();             // start web server
   Serial.println("Web server started");
   delay(1000);
@@ -253,19 +259,15 @@ void runHoming(){
       Serial.println("Home1 reached");
       homeState = NONE;
       break;
-    case SEEK2: // search for switch 2
-      stepper.move(100000);                          // move right
-      while(!switchHit(SW2_PIN)) stepper.run();
-      stepper.stop(); stepper.runToPosition();
-      home2Pos = stepper.currentPosition();          // remember position
+    case SEEK2: // move to stored Home2 position
+      stepper.moveTo(home2Pos);
+      stepper.runToPosition();
       Serial.println("Home2 reached");
       homeState = NONE;
       break;
-    case SEEK3: // search for switch 3
-      stepper.move(100000);
-      while(!switchHit(SW3_PIN)) stepper.run();
-      stepper.stop(); stepper.runToPosition();
-      home3Pos = stepper.currentPosition();          // remember position
+    case SEEK3: // move to stored Home3 position
+      stepper.moveTo(home3Pos);
+      stepper.runToPosition();
       Serial.println("Home3 reached");
       homeState = NONE;
       break;
