@@ -210,7 +210,7 @@ void loop() {
   // periodically report position and speed over Serial
   static unsigned long lastPrint = 0;
   if (millis() - lastPrint > 500) {
-    float poscm = stepper.currentPosition() / (STEPS_PER_MM * 10.0);
+    float poscm = (stepper.currentPosition() / (STEPS_PER_MM * 10.0))-home1PosCm;
     float spd = stepper.speed() / STEPS_PER_MM;
     Serial.print("Pos: ");
     Serial.print(poscm, 2);
@@ -280,8 +280,9 @@ void fullHoming(){
   stepper.setMaxSpeed(startupHomeSpeedMmS * STEPS_PER_MM);
   stepper.setSpeed(-startupHomeSpeedMmS * STEPS_PER_MM);
   while(!switchHit(SW1_PIN)) stepper.runSpeed();
-  stepper.setCurrentPosition(home1PosCm * 10 * STEPS_PER_MM);
+  stepper.setCurrentPosition(0);
   Serial.println("Home1 reached");
+  Serial.println(stepper.currentPosition());
 
   // scan toward the positive end recording switches 2 and 3
   bool found2 = false;
@@ -292,11 +293,13 @@ void fullHoming(){
     if(!found2 && switchHit(SW2_PIN)){
       home2Pos = stepper.currentPosition();
       Serial.println("Home2 reached");
+      Serial.println(stepper.currentPosition());
       found2 = true;
     }
     if(switchHit(SW3_PIN)){
       home3Pos = stepper.currentPosition();
       Serial.println("Home3 reached");
+      Serial.println(stepper.currentPosition());
       break;
     }
   }
