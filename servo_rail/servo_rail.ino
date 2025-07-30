@@ -28,10 +28,10 @@ const float STEPS_PER_MM = (MOTOR_STEPS * MICROSTEPS) / SCREW_LEAD_MM;
 // Adjustable travel limits and Home1 location in centimeters
 float railMinCm  = -12.5;
 float railMaxCm  =  12.0;
-float home1PosCm = -11.9;   // user-provided position of Home1
+float home1PosCm = -11.8;   // user-provided position of Home1
 
 // Startup homing speed in mm/s (slow constant speed)
-float startupHomeSpeedMmS = 10.0;
+float startupHomeSpeedMmS = 15.0;
 
 // Web server for the control interface
 AsyncWebServer server(80);
@@ -287,7 +287,7 @@ void fullHoming(){
 
   // scan toward the positive end recording switches 2 and 3
   bool found2 = false;
-  long target = railMaxCm * 10 * STEPS_PER_MM;
+  long target = (railMaxCm + abs(home1PosCm)) * 10 * STEPS_PER_MM;
   stepper.setSpeed(startupHomeSpeedMmS * STEPS_PER_MM);
   while(stepper.currentPosition() < target){
     stepper.runSpeed();
@@ -306,6 +306,9 @@ void fullHoming(){
   }
   // move to machine zero (offset from Home1)
   long zeroSteps = (-home1PosCm * 10) * STEPS_PER_MM;
+  stepper.setAcceleration(ACCEL_MM_S2 * STEPS_PER_MM);
+  stepper.setSpeed(30 * STEPS_PER_MM);
+  stepper.setMaxSpeed(30 * STEPS_PER_MM); // default speed
   stepper.moveTo(zeroSteps);
   stepper.runToPosition();
   Serial.println("Startup homing complete");
