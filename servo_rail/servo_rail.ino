@@ -29,6 +29,11 @@ const float STEPS_PER_MM = (MOTOR_STEPS * MICROSTEPS) / SCREW_LEAD_MM;
 float railMinCm  = -12;
 float railMaxCm  =  12.0;
 float home1PosCm = -12.0;   // user-provided position of Home1
+<<<<<<< Updated upstream
+=======
+// Startup homing speed in mm/s (slow constant speed)
+float startupHomeSpeedMmS = 10.0;
+>>>>>>> Stashed changes
 
 // Web server for the control interface
 AsyncWebServer server(80);
@@ -213,7 +218,6 @@ void loop() {
     Serial.print(poscm, 2);
     Serial.print(" cm Speed: ");
     Serial.println(spd, 2);
-    Serial.println(digitalRead(SW1_PIN));
     lastPrint = millis();
   }
 
@@ -300,6 +304,6 @@ void fullHoming(){
     }
   }
   // final position becomes zero
-  stepper.setCurrentPosition(0);
+  stepper.setCurrentPosition(home3Pos);
   Serial.println("Startup homing complete");
 }
