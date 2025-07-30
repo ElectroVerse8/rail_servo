@@ -171,7 +171,8 @@ void setup() {
       long minmm = railMinCm * 10;
       long maxmm = railMaxCm * 10;
       pos = constrain(pos, minmm, maxmm);
-      stepper.moveTo(pos * STEPS_PER_MM);
+      long target = (pos - home1PosCm * 10) * STEPS_PER_MM; // offset from Home1
+      stepper.moveTo(target);
       Serial.print("Move to ");
       Serial.println(pos);
     }
@@ -210,7 +211,7 @@ void loop() {
   // periodically report position and speed over Serial
   static unsigned long lastPrint = 0;
   if (millis() - lastPrint > 500) {
-    float poscm = (stepper.currentPosition() / (STEPS_PER_MM * 10.0))-home1PosCm;
+    float poscm = stepper.currentPosition() / (STEPS_PER_MM * 10.0) + home1PosCm;
     float spd = stepper.speed() / STEPS_PER_MM;
     Serial.print("Pos: ");
     Serial.print(poscm, 2);
@@ -247,7 +248,7 @@ void runHoming(){
       stepper.move(-100000);                         // move left until hit
       while(!switchHit(SW1_PIN)) stepper.run();
       stepper.stop(); stepper.runToPosition();       // decelerate to stop
-      stepper.setCurrentPosition(home1PosCm * 10 * STEPS_PER_MM); // known location
+      stepper.setCurrentPosition(0); // Home1 becomes stepper origin
       Serial.println(digitalRead(SW1_PIN));
       Serial.println("Home1 reached");
       homeState = NONE;
@@ -303,8 +304,10 @@ void fullHoming(){
       break;
     }
   }
-  // final position becomes zero
-  stepper.setCurrentPosition(home3Pos);
+  // move to machine zero (offset from Home1)
+  long zeroSteps = (-home1PosCm * 10) * STEPS_PER_MM;
+  stepper.moveTo(zeroSteps);
+  stepper.runToPosition();
   Serial.println("Startup homing complete");
 
   // restore normal acceleration for regular moves
