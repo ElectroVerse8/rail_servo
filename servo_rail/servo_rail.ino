@@ -121,6 +121,8 @@ String getIndexHtml(){
 void startHome(int n);
 // Execute one step of the homing state machine
 void runHoming();
+// Perform the entire homing routine at startup
+void fullHoming();
 
 // Possible states during homing
 enum HomeState { NONE, SEEK1, SEEK2, SEEK3 };
@@ -190,13 +192,7 @@ void setup() {
   delay(1000);
 
   // run full homing sequence on boot
-  startHome(1);
-  while(homeState != NONE) runHoming();
-  startHome(2);
-  while(homeState != NONE) runHoming();
-  startHome(3);
-  while(homeState != NONE) runHoming();
-  stepper.setCurrentPosition(0);   // zero after homing
+  fullHoming();
 }
 
 void loop() {
@@ -269,4 +265,37 @@ void runHoming(){
     default:
       break;
   }
+}
+
+// Perform the full homing sequence on startup
+void fullHoming(){
+  // first seek switch 1 and assign the configured location
+  startHome(1);
+  while(homeState != NONE) runHoming();
+
+  // scan toward the positive end recording switches 2 and 3
+  bool found2 = false;
+  long target = railMaxCm * 10 * STEPS_PER_MM;
+  stepper.moveTo(target);
+  while(stepper.distanceToGo() != 0){
+    stepper.run();
+    if(!found2 && switchHit(SW2_PIN)){
+      stepper.stop();
+      stepper.runToPosition();
+      home2Pos = stepper.currentPosition();
+      Serial.println("Home2 reached");
+      found2 = true;
+      stepper.moveTo(target);
+    }
+    if(switchHit(SW3_PIN)){
+      stepper.stop();
+      stepper.runToPosition();
+      home3Pos = stepper.currentPosition();
+      Serial.println("Home3 reached");
+      break;
+    }
+  }
+  // final position becomes zero
+  stepper.setCurrentPosition(0);
+  Serial.println("Startup homing complete");
 }
