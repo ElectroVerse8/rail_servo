@@ -29,6 +29,8 @@ const float STEPS_PER_MM = (MOTOR_STEPS * MICROSTEPS) / SCREW_LEAD_MM;
 float railMinCm  = -12;
 float railMaxCm  =  12.0;
 float home1PosCm = -12.0;   // user-provided position of Home1
+// Startup homing speed in mm/s (slow constant speed)
+float startupHomeSpeedMmS = 5.0;
 
 // Web server for the control interface
 AsyncWebServer server(80);
@@ -273,27 +275,26 @@ void runHoming(){
 
 // Perform the full homing sequence on startup
 void fullHoming(){
-  // first seek switch 1 and assign the configured location
-  startHome(1);
-  while(homeState != NONE) runHoming();
+  // run slow constant-speed homing toward switch 1
+  stepper.setAcceleration(0); // disable acceleration for startup homing
+  stepper.setMaxSpeed(startupHomeSpeedMmS * STEPS_PER_MM);
+  stepper.setSpeed(-startupHomeSpeedMmS * STEPS_PER_MM);
+  while(!switchHit(SW1_PIN)) stepper.runSpeed();
+  stepper.setCurrentPosition(home1PosCm * 10 * STEPS_PER_MM);
+  Serial.println("Home1 reached");
 
   // scan toward the positive end recording switches 2 and 3
   bool found2 = false;
   long target = railMaxCm * 10 * STEPS_PER_MM;
-  stepper.moveTo(target);
-  while(stepper.distanceToGo() != 0){
-    stepper.run();
+  stepper.setSpeed(startupHomeSpeedMmS * STEPS_PER_MM);
+  while(stepper.currentPosition() < target){
+    stepper.runSpeed();
     if(!found2 && switchHit(SW2_PIN)){
-      stepper.stop();
-      stepper.runToPosition();
       home2Pos = stepper.currentPosition();
       Serial.println("Home2 reached");
       found2 = true;
-      stepper.moveTo(target);
     }
     if(switchHit(SW3_PIN)){
-      stepper.stop();
-      stepper.runToPosition();
       home3Pos = stepper.currentPosition();
       Serial.println("Home3 reached");
       break;
@@ -302,4 +303,7 @@ void fullHoming(){
   // final position becomes zero
   stepper.setCurrentPosition(0);
   Serial.println("Startup homing complete");
+
+  // restore normal acceleration for regular moves
+  stepper.setAcceleration(ACCEL_MM_S2 * STEPS_PER_MM);
 }
