@@ -26,19 +26,12 @@ const float ACCEL_MM_S2 = 50.0;     // acceleration mm/s^2
 const float STEPS_PER_MM = (MOTOR_STEPS * MICROSTEPS) / SCREW_LEAD_MM;
 
 // Adjustable travel limits and Home1 location in centimeters
-float railMinCm  = -12;
+float railMinCm  = -12.5;
 float railMaxCm  =  12.0;
-float home1PosCm = -12.0;   // user-provided position of Home1
-<<<<<<< HEAD
-<<<<<<< Updated upstream
-=======
+float home1PosCm = -11.9;   // user-provided position of Home1
+
 // Startup homing speed in mm/s (slow constant speed)
 float startupHomeSpeedMmS = 10.0;
->>>>>>> Stashed changes
-=======
-// Startup homing speed in mm/s (slow constant speed)
-float startupHomeSpeedMmS = 5.0;
->>>>>>> 70b128778cd25c133bad03a6583cac7db4972e74
 
 // Web server for the control interface
 AsyncWebServer server(80);
