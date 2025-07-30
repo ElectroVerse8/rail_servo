@@ -21,7 +21,7 @@ const int SW3_PIN = 19; // Home3
 // Mechanical parameters for the linear rail
 const float SCREW_LEAD_MM = 4.0;    // mm per revolution
 const int MOTOR_STEPS = 200;        // full steps per rev
-const int MICROSTEPS = 8;          // driver microstepping
+const int MICROSTEPS = 16;          // driver microstepping
 const float ACCEL_MM_S2 = 50.0;     // acceleration mm/s^2
 const float STEPS_PER_MM = (MOTOR_STEPS * MICROSTEPS) / SCREW_LEAD_MM;
 
@@ -143,8 +143,9 @@ void setup() {
 
   // configure the stepper library
   stepper.setEnablePin(EN_PIN);
+  stepper.setPinsInverted(false, false, true);
   stepper.setAcceleration(ACCEL_MM_S2 * STEPS_PER_MM);
-  stepper.setMaxSpeed(100 * STEPS_PER_MM); // default speed
+  stepper.setMaxSpeed(30 * STEPS_PER_MM); // default speed
 
   // start the Wi-Fi access point
   WiFi.mode(WIFI_AP);
@@ -186,6 +187,7 @@ void setup() {
   });
   server.begin();             // start web server
   Serial.println("Web server started");
+  delay(1000);
 
   // run full homing sequence on boot
   startHome(1);
@@ -214,6 +216,7 @@ void loop() {
     Serial.print(poscm, 2);
     Serial.print(" cm Speed: ");
     Serial.println(spd, 2);
+    Serial.println(digitalRead(SW1_PIN));
     lastPrint = millis();
   }
 }
