@@ -12,7 +12,7 @@ Connect to the `rail_servo` network (password `123456789`) and open the access p
 ## Startup behavior
 
 The travel range and the location of switch&nbsp;1 are configurable in the
-firmware. When the ESP32 boots it performs a full homing sequence:
+firmware. When the ESP32 boots it runs `fullHoming()` to perform a full sequence:
 
 1. It first seeks switch&nbsp;1 and assigns the configured `home1PosCm` value to
    the current position.
