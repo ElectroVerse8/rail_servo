@@ -26,9 +26,9 @@ const float ACCEL_MM_S2 = 50.0;     // acceleration mm/s^2
 const float STEPS_PER_MM = (MOTOR_STEPS * MICROSTEPS) / SCREW_LEAD_MM;
 
 // Adjustable travel limits and Home1 location in centimeters
-float railMinCm  = -12.5;
+float railMinCm  = -12;
 float railMaxCm  =  12.0;
-float home1PosCm = -13.6;   // user-provided position of Home1
+float home1PosCm = -12.0;   // user-provided position of Home1
 
 // Web server for the control interface
 AsyncWebServer server(80);
@@ -191,6 +191,7 @@ void setup() {
   Serial.println("Web server started");
   delay(1000);
 
+  stepper.enableOutputs();
   // run full homing sequence on boot
   fullHoming();
 }
@@ -215,6 +216,9 @@ void loop() {
     Serial.println(digitalRead(SW1_PIN));
     lastPrint = millis();
   }
+
+  if(stepper.distanceToGo() !=0) stepper.enableOutputs();
+  else stepper.disableOutputs();
 }
 
 // Returns true if the given limit switch is pressed
