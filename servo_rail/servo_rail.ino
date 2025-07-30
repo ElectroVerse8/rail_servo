@@ -9,19 +9,19 @@ const char* ssid = "rail_servo";
 const char* password = "123456789";
 
 // Pins connected to the stepper driver
-const int STEP_PIN = 14;
-const int DIR_PIN  = 12;
-const int EN_PIN   = 13;
-
+const int STEP_PIN = 21;
+const int DIR_PIN  = 22;
+const int EN_PIN   = 23;
+ 
 // Limit switch pins (active LOW)
-const int SW1_PIN = 25; // Home1
-const int SW2_PIN = 26; // Home2
-const int SW3_PIN = 27; // Home3
+const int SW1_PIN = 17; // Home1
+const int SW2_PIN = 18; // Home2
+const int SW3_PIN = 19; // Home3
 
 // Mechanical parameters for the linear rail
-const float SCREW_LEAD_MM = 5.0;    // mm per revolution
+const float SCREW_LEAD_MM = 4.0;    // mm per revolution
 const int MOTOR_STEPS = 200;        // full steps per rev
-const int MICROSTEPS = 16;          // driver microstepping
+const int MICROSTEPS = 8;          // driver microstepping
 const float ACCEL_MM_S2 = 50.0;     // acceleration mm/s^2
 const float STEPS_PER_MM = (MOTOR_STEPS * MICROSTEPS) / SCREW_LEAD_MM;
 
@@ -139,7 +139,7 @@ void setup() {
   pinMode(SW1_PIN, INPUT_PULLUP);
   pinMode(SW2_PIN, INPUT_PULLUP);
   pinMode(SW3_PIN, INPUT_PULLUP);
-  digitalWrite(EN_PIN, HIGH);   // enable driver
+  digitalWrite(EN_PIN, LOW);   // enable driver
 
   // configure the stepper library
   stepper.setEnablePin(EN_PIN);
