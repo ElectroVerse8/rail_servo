@@ -1,6 +1,6 @@
 # Rail Servo
 
-This project controls a stepper-driven linear rail using an ESP32. The ESP32 now starts as a Wi-Fi access point and hosts a web interface that lets a phone control position and speed with sliders and provides homing buttons for three limit switches.
+This project controls a stepper-driven linear rail using an ESP32. The ESP32 now starts as a Wi-Fi access point and hosts a web interface that lets a phone control position and speed with sliders and provides homing buttons for three limit switches. The page also includes a large red **STOP** button for immediately halting motion.
 
 Default Wi-Fi credentials:
 
