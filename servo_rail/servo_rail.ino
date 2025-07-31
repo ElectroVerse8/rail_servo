@@ -116,19 +116,21 @@ function inc(dir){
   pos.value=v;
   sendMove();
 }
-function home(n){fetch('/home?n='+n);}
-function homeAll(){fetch('/homeall');}
 function stopMotion(){
   fetch('/stop')
     .then(r=>r.text())
     .then(t=>{pos.value=parseInt(t);updateLabel();});
 }
-function updatePos(){
-  fetch('/pos')
+function home(n){
+  fetch('/home?n='+n)
     .then(r=>r.text())
     .then(t=>{pos.value=parseInt(t);updateLabel();});
 }
-setInterval(updatePos, 500);
+function homeAll(){
+  fetch('/homeall')
+    .then(r=>r.text())
+    .then(t=>{pos.value=parseInt(t);updateLabel();});
+}
 </script>
 </body>
 </html>
@@ -218,12 +220,17 @@ void setup() {
     startHome(n);
     Serial.print("Home command ");
     Serial.println(n);
-    req->send(200, "text/plain", "Homing");
+    while(homeState != NONE){
+      runHoming();
+    }
+    long pos10 = stepper.currentPosition() / STEPS_PER_MM + home1PosCm * 10;
+    req->send(200, "text/plain", String(pos10));
   });
   server.on("/homeall", HTTP_GET, [](AsyncWebServerRequest *req){
     abrt = 0;
-    flag = 1;
-    req->send(200, "text/plain", "Full homing");
+    fullHoming();
+    long pos10 = stepper.currentPosition() / STEPS_PER_MM + home1PosCm * 10;
+    req->send(200, "text/plain", String(pos10));
   });
   server.on("/stop", HTTP_GET, [](AsyncWebServerRequest *req){
     // immediate stop and cancel sequences
@@ -232,10 +239,6 @@ void setup() {
     abrt = 1;
     stepper.moveTo(stepper.currentPosition());
     stepper.setSpeed(0);
-    long pos10 = stepper.currentPosition() / STEPS_PER_MM + home1PosCm * 10;
-    req->send(200, "text/plain", String(pos10));
-  });
-  server.on("/pos", HTTP_GET, [](AsyncWebServerRequest *req){
     long pos10 = stepper.currentPosition() / STEPS_PER_MM + home1PosCm * 10;
     req->send(200, "text/plain", String(pos10));
   });
