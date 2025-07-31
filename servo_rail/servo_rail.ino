@@ -44,6 +44,8 @@ long home3Pos = 0;
 
 long onDelay = 0;
 bool flag = 0;
+bool abrt = 0;
+
 // HTML page served to the client with placeholders for limits
 const char index_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
@@ -183,6 +185,7 @@ void setup() {
     req->send(200, "text/html", getIndexHtml());
   });
   server.on("/move", HTTP_GET, [](AsyncWebServerRequest *req){
+    abrt = 0;
     if(req->hasParam("pos")) {
       long pos = req->getParam("pos")->value().toInt(); // value in mm
       long minmm = railMinCm * 10;
@@ -202,6 +205,7 @@ void setup() {
     req->send(200, "text/plain", "OK");
   });
   server.on("/home", HTTP_GET, [](AsyncWebServerRequest *req){
+    abrt = 0;
     int n = req->getParam("n")->value().toInt();
     startHome(n);
     Serial.print("Home command ");
@@ -209,6 +213,7 @@ void setup() {
     req->send(200, "text/plain", "Homing");
   });
   server.on("/homeall", HTTP_GET, [](AsyncWebServerRequest *req){
+    abrt = 0;
     flag = 1;
     req->send(200, "text/plain", "Full homing");
   });
@@ -216,9 +221,9 @@ void setup() {
     // immediate stop and cancel sequences
     homeState = NONE;
     flag = 0;
+    abrt = 1;
     stepper.moveTo(stepper.currentPosition());
     stepper.setSpeed(0);
-    stepper.disableOutputs();
     long pos10 = stepper.currentPosition() / STEPS_PER_MM + home1PosCm * 10;
     req->send(200, "text/plain", String(pos10));
   });
@@ -313,16 +318,22 @@ void fullHoming(){
   stepper.setAcceleration(0); // disable acceleration for startup homing
   stepper.setMaxSpeed(startupHomeSpeedMmS * STEPS_PER_MM);
   stepper.setSpeed(-startupHomeSpeedMmS * STEPS_PER_MM);
-  while(!switchHit(SW1_PIN)) stepper.runSpeed();
-  stepper.setCurrentPosition(0);
-  Serial.println("Home1 reached");
+  while(!switchHit(SW1_PIN)){ 
+    stepper.runSpeed();
+    if(abrt) break;
+  }
+
+  if(!abrt){
+    stepper.setCurrentPosition(0);
+    Serial.println("Home1 reached");
+  }
   Serial.println(stepper.currentPosition());
 
   // scan toward the positive end recording switches 2 and 3
   bool found2 = false;
   long target = (railMaxCm + abs(home1PosCm)) * 10 * STEPS_PER_MM;
   stepper.setSpeed(startupHomeSpeedMmS * STEPS_PER_MM);
-  while(stepper.currentPosition() < target){
+  while(stepper.currentPosition() < target && !abrt){
     stepper.runSpeed();
     if(!found2 && switchHit(SW2_PIN)){
       home2Pos = stepper.currentPosition();
@@ -337,13 +348,17 @@ void fullHoming(){
       break;
     }
   }
+
+  
   // move to machine zero (offset from Home1)
-  long zeroSteps = (-home1PosCm * 10) * STEPS_PER_MM;
-  stepper.setAcceleration(ACCEL_MM_S2 * STEPS_PER_MM);
-  stepper.setSpeed(30 * STEPS_PER_MM);
-  stepper.setMaxSpeed(30 * STEPS_PER_MM); // default speed
-  stepper.moveTo(zeroSteps);
-  stepper.runToPosition();
+  if(!abrt){
+    long zeroSteps = (-home1PosCm * 10) * STEPS_PER_MM;
+    stepper.setAcceleration(ACCEL_MM_S2 * STEPS_PER_MM);
+    stepper.setSpeed(30 * STEPS_PER_MM);
+    stepper.setMaxSpeed(30 * STEPS_PER_MM); // default speed
+    stepper.moveTo(zeroSteps);
+    stepper.runToPosition();
+  }
   Serial.println("Startup homing complete");
 
   // restore normal acceleration for regular moves
