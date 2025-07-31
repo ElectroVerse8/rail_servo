@@ -364,8 +364,6 @@ void fullHoming(){
       Serial.println(stepper.currentPosition());
       break;
     }
-    
-    events.send(String(stepper.currentPosition() / STEPS_PER_MM + home1PosCm * 10), "pos");
   }
 
   
@@ -383,4 +381,5 @@ void fullHoming(){
   // restore normal acceleration for regular moves
   stepper.setAcceleration(ACCEL_MM_S2 * STEPS_PER_MM);
   flag = 0;  // stop repeating full homing
+  events.send(String(stepper.currentPosition() / STEPS_PER_MM + home1PosCm * 10), "pos");
 }
