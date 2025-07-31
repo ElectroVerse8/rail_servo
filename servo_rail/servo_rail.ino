@@ -58,6 +58,8 @@ button{background:#028;color:#fff;padding:10px 20px;margin:5px;border:none;borde
 .inc{display:flex;justify-content:center;align-items:center;margin:10px;}
 .inc label{margin:0 5px;}
 .pos{font-size:24px;margin:10px;}
+/* large red stop button fixed to bottom center */
+#stopBtn{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#d00;color:#fff;width:80px;height:80px;font-size:20px;border:none;border-radius:40px;}
 </style>
 </head>
 <body>
@@ -85,6 +87,7 @@ button{background:#028;color:#fff;padding:10px 20px;margin:5px;border:none;borde
 <button onclick='home(3)'>Home3</button>
 <button onclick='homeAll()'>Home all</button>
 </div>
+<button id='stopBtn' onclick='stopMotion()'>STOP</button>
 <script>
 let pos=document.getElementById('pos');
 let spd=document.getElementById('spd');
@@ -112,6 +115,11 @@ function inc(dir){
 }
 function home(n){fetch('/home?n='+n);}
 function homeAll(){fetch('/homeall');}
+function stopMotion(){
+  fetch('/stop')
+    .then(r=>r.text())
+    .then(t=>{pos.value=parseInt(t);updateLabel();});
+}
 </script>
 </body>
 </html>
@@ -203,6 +211,16 @@ void setup() {
   server.on("/homeall", HTTP_GET, [](AsyncWebServerRequest *req){
     flag = 1;
     req->send(200, "text/plain", "Full homing");
+  });
+  server.on("/stop", HTTP_GET, [](AsyncWebServerRequest *req){
+    // immediate stop and cancel sequences
+    homeState = NONE;
+    flag = 0;
+    stepper.moveTo(stepper.currentPosition());
+    stepper.setSpeed(0);
+    stepper.disableOutputs();
+    long pos10 = stepper.currentPosition() / STEPS_PER_MM + home1PosCm * 10;
+    req->send(200, "text/plain", String(pos10));
   });
   server.begin();             // start web server
   Serial.println("Web server started");
