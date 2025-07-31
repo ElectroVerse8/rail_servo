@@ -35,6 +35,7 @@ float startupHomeSpeedMmS = 15.0;
 
 // Web server for the control interface
 AsyncWebServer server(80);
+AsyncEventSource events("/events");
 // Stepper object controlling the motor
 AccelStepper stepper(AccelStepper::DRIVER, STEP_PIN, DIR_PIN);
 
@@ -128,7 +129,11 @@ function updatePos(){
     .then(r=>r.text())
     .then(t=>{pos.value=parseInt(t);updateLabel();});
 }
-setInterval(updatePos, 500);
+const es = new EventSource('/events');
+es.addEventListener('pos', e => {
+  pos.value = parseInt(e.data);
+  updateLabel();
+});
 </script>
 </body>
 </html>
@@ -239,6 +244,11 @@ void setup() {
     long pos10 = stepper.currentPosition() / STEPS_PER_MM + home1PosCm * 10;
     req->send(200, "text/plain", String(pos10));
   });
+  server.addHandler(&events);
+  events.onConnect([](AsyncEventSourceClient *client){
+    Serial.println("SSE client connected");
+  });
+  events.begin();
   server.begin();             // start web server
   Serial.println("Web server started");
   delay(1000);
@@ -292,18 +302,21 @@ void runHoming(){
       stepper.moveTo(0);
       stepper.runToPosition();
       Serial.println("Home1 reached");
+      events.send(String(stepper.currentPosition() / STEPS_PER_MM + home1PosCm * 10), "pos");
       homeState = NONE;
       break;
     case SEEK2: // move to stored Home2 position
       stepper.moveTo(home2Pos);
       stepper.runToPosition();
       Serial.println("Home2 reached");
+      events.send(String(stepper.currentPosition() / STEPS_PER_MM + home1PosCm * 10), "pos");
       homeState = NONE;
       break;
     case SEEK3: // move to stored Home3 position
       stepper.moveTo(home3Pos);
       stepper.runToPosition();
       Serial.println("Home3 reached");
+      events.send(String(stepper.currentPosition() / STEPS_PER_MM + home1PosCm * 10), "pos");
       homeState = NONE;
       break;
     default:
