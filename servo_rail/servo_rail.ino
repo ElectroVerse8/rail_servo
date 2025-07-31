@@ -42,6 +42,8 @@ AccelStepper stepper(AccelStepper::DRIVER, STEP_PIN, DIR_PIN);
 long home2Pos = 0;
 long home3Pos = 0;
 
+long onDelay = 0;
+bool flag = 0;
 // HTML page served to the client with placeholders for limits
 const char index_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
@@ -199,7 +201,7 @@ void setup() {
     req->send(200, "text/plain", "Homing");
   });
   server.on("/homeall", HTTP_GET, [](AsyncWebServerRequest *req){
-    fullHoming();
+    flag = 1;
     req->send(200, "text/plain", "Full homing");
   });
   server.begin();             // start web server
@@ -212,6 +214,8 @@ void setup() {
 }
 
 void loop() {
+  if(flag) fullHoming();
+
   // run the current motion
   if(homeState == NONE) {
     stepper.run();            // normal movement
@@ -231,8 +235,13 @@ void loop() {
     lastPrint = millis();
   }
 
-  if(stepper.distanceToGo() !=0) stepper.enableOutputs();
-  else stepper.disableOutputs();
+  if(stepper.distanceToGo() !=0){
+     stepper.enableOutputs();
+     onDelay = millis();
+  }
+  else if((onDelay + 1000) <= millis()){
+     stepper.disableOutputs();
+  }
 }
 
 // Returns true if the given limit switch is pressed
@@ -280,6 +289,8 @@ void runHoming(){
 
 // Perform the full homing sequence on startup
 void fullHoming(){
+  Serial.println("Starting Full Homing...");
+
   // run slow constant-speed homing toward switch 1
   stepper.setAcceleration(0); // disable acceleration for startup homing
   stepper.setMaxSpeed(startupHomeSpeedMmS * STEPS_PER_MM);
