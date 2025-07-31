@@ -363,4 +363,5 @@ void fullHoming(){
 
   // restore normal acceleration for regular moves
   stepper.setAcceleration(ACCEL_MM_S2 * STEPS_PER_MM);
+  flag = 0;  // stop repeating full homing
 }
