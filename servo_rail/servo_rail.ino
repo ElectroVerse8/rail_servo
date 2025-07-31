@@ -216,7 +216,7 @@ void loop() {
 
   // periodically report position and speed over Serial
   static unsigned long lastPrint = 0;
-  if (millis() - lastPrint > 500) {
+  if (millis() - lastPrint > 1000) {
     float poscm = stepper.currentPosition() / (STEPS_PER_MM * 10.0) + home1PosCm;
     float spd = stepper.speed() / STEPS_PER_MM;
     Serial.print("Pos: ");
@@ -243,19 +243,16 @@ void startHome(int n){
   Serial.print("Starting homing ");
   Serial.println(n);
   // slower speed for reliable homing
-  stepper.setMaxSpeed(50 * STEPS_PER_MM);
-  stepper.setAcceleration(ACCEL_MM_S2 * STEPS_PER_MM);
+  //stepper.setMaxSpeed(50 * STEPS_PER_MM);
+  //stepper.setAcceleration(ACCEL_MM_S2 * STEPS_PER_MM);
 }
 
 // Execute the homing state machine
 void runHoming(){
   switch(homeState){
     case SEEK1: // search for switch 1
-      stepper.move(-100000);                         // move left until hit
-      while(!switchHit(SW1_PIN)) stepper.run();
-      stepper.stop(); stepper.runToPosition();       // decelerate to stop
-      stepper.setCurrentPosition(0); // Home1 becomes stepper origin
-      Serial.println(digitalRead(SW1_PIN));
+      stepper.moveTo(0);
+      stepper.runToPosition();
       Serial.println("Home1 reached");
       homeState = NONE;
       break;
