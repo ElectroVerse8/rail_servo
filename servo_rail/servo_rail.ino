@@ -45,6 +45,7 @@ long home3Pos = 0;
 long onDelay = 0;
 bool flag = 0;
 bool abrt = 0;
+bool oflag = 1;
 
 // HTML page served to the client with placeholders for limits
 const char index_html[] PROGMEM = R"rawliteral(
@@ -204,7 +205,7 @@ void setup() {
     }
     if(req->hasParam("spd")) {
       int spd = req->getParam("spd")->value().toInt();
-      stepper.setMaxSpeed(spd * STEPS_PER_MM);
+      stepper.setMaxSpeed(0.5*spd * STEPS_PER_MM);
       Serial.print("Set speed ");
       Serial.println(spd);
     }
@@ -265,16 +266,19 @@ void loop() {
     Serial.print(poscm, 2);
     Serial.print(" cm Speed: ");
     Serial.println(spd, 2);
+    Serial.print("off : ");
+    Serial.println(oflag);
     lastPrint = millis();
   }
 
   if(stepper.distanceToGo() !=0){
      stepper.enableOutputs();
      onDelay = millis();
+     oflag = 0;
   }
   else if((onDelay + 1000) <= millis()){
-     stepper.disableOutputs();
-  }
+    stepper.disableOutputs();
+    oflag = 1;
 }
 
 // Returns true if the given limit switch is pressed
@@ -287,11 +291,9 @@ void startHome(int n){
   if(n==1) homeState = SEEK1;
   else if(n==2) homeState = SEEK2;
   else if(n==3) homeState = SEEK3;
-  Serial.print("Starting homing ");
-  Serial.println(n);
   // slower speed for reliable homing
-  //stepper.setMaxSpeed(50 * STEPS_PER_MM);
-  //stepper.setAcceleration(ACCEL_MM_S2 * STEPS_PER_MM);
+  stepper.setMaxSpeed(50 * STEPS_PER_MM);
+  stepper.setAcceleration(ACCEL_MM_S2 * STEPS_PER_MM);
 }
 
 // Execute the homing state machine
@@ -364,8 +366,8 @@ void fullHoming(){
   if(!abrt){
     long zeroSteps = (-home1PosCm * 10) * STEPS_PER_MM;
     stepper.setAcceleration(ACCEL_MM_S2 * STEPS_PER_MM);
-    stepper.setSpeed(30 * STEPS_PER_MM);
-    stepper.setMaxSpeed(30 * STEPS_PER_MM); // default speed
+    stepper.setSpeed(20 * STEPS_PER_MM);
+    stepper.setMaxSpeed(20 * STEPS_PER_MM); // default speed
     stepper.moveTo(zeroSteps);
     stepper.runToPosition();
   }
