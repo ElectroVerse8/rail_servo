@@ -25,10 +25,12 @@ const int MICROSTEPS = 16;          // driver microstepping
 const float ACCEL_MM_S2 = 50.0;     // acceleration mm/s^2
 const float STEPS_PER_MM = (MOTOR_STEPS * MICROSTEPS) / SCREW_LEAD_MM;
 
+
 // Adjustable travel limits and Home1 location in centimeters
 float railMinCm  = -12.5;
 float railMaxCm  =  12.0;
 float home1PosCm = -11.8;   // user-provided position of Home1
+int speed = 30;
 
 // Startup homing speed in mm/s (slow constant speed)
 float startupHomeSpeedMmS = 15.0;
@@ -211,6 +213,7 @@ void setup() {
     }
     if(req->hasParam("spd")) {
       int spd = req->getParam("spd")->value().toInt();
+      speed = spd;
       stepper.setMaxSpeed(0.3 * spd * STEPS_PER_MM);
       Serial.print("Set speed ");
       Serial.println(spd);
@@ -248,7 +251,6 @@ void setup() {
   events.onConnect([](AsyncEventSourceClient *client){
     Serial.println("SSE client connected");
   });
-  events.begin();
   server.begin();             // start web server
   Serial.println("Web server started");
   delay(1000);
@@ -290,7 +292,7 @@ void startHome(int n){
   else if(n==2) homeState = SEEK2;
   else if(n==3) homeState = SEEK3;
   // slower speed for reliable homing
-  stepper.setMaxSpeed(30 * STEPS_PER_MM);
+  stepper.setMaxSpeed(0.3 * speed * STEPS_PER_MM);
   stepper.setAcceleration(ACCEL_MM_S2 * STEPS_PER_MM);
 }
 
@@ -362,6 +364,8 @@ void fullHoming(){
       Serial.println(stepper.currentPosition());
       break;
     }
+    
+    events.send(String(stepper.currentPosition() / STEPS_PER_MM + home1PosCm * 10), "pos");
   }
 
   
