@@ -122,6 +122,12 @@ function stopMotion(){
     .then(r=>r.text())
     .then(t=>{pos.value=parseInt(t);updateLabel();});
 }
+function updatePos(){
+  fetch('/pos')
+    .then(r=>r.text())
+    .then(t=>{pos.value=parseInt(t);updateLabel();});
+}
+setInterval(updatePos, 500);
 </script>
 </body>
 </html>
@@ -224,6 +230,10 @@ void setup() {
     abrt = 1;
     stepper.moveTo(stepper.currentPosition());
     stepper.setSpeed(0);
+    long pos10 = stepper.currentPosition() / STEPS_PER_MM + home1PosCm * 10;
+    req->send(200, "text/plain", String(pos10));
+  });
+  server.on("/pos", HTTP_GET, [](AsyncWebServerRequest *req){
     long pos10 = stepper.currentPosition() / STEPS_PER_MM + home1PosCm * 10;
     req->send(200, "text/plain", String(pos10));
   });
