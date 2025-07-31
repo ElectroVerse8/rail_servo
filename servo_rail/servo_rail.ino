@@ -88,20 +88,25 @@ let pos=document.getElementById('pos');
 let spd=document.getElementById('spd');
 let label=document.getElementById('posLabel');
 let spdLabel=document.getElementById('spdLabel');
-pos.oninput=()=>{update();};
-spd.oninput=()=>{spdLabel.innerHTML=spd.value; update();};
-function update(){
+pos.oninput=()=>{updateLabel();};
+pos.onchange=()=>{sendMove();};
+spd.oninput=()=>{spdLabel.innerHTML=spd.value;};
+spd.onchange=()=>{sendMove();};
+function updateLabel(){
   let val=parseInt(pos.value);
   pos.value=val;
   label.innerHTML=(val/10)+' cm';
-  fetch('/move?pos='+val+'&spd='+spd.value);
+}
+function sendMove(){
+  updateLabel();
+  fetch('/move?pos='+pos.value+'&spd='+spd.value);
 }
 function inc(dir){
   let step=document.querySelector('input[name="step"]:checked').value;
   let v=parseInt(pos.value)+dir*step;
   if(v>%MAX10%)v=%MAX10%;if(v<%MIN10%)v=%MIN10%;
   pos.value=v;
-  update();
+  sendMove();
 }
 function home(n){fetch('/home?n='+n);}
 function homeAll(){fetch('/homeall');}
