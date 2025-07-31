@@ -192,6 +192,7 @@ void setup() {
     req->send(200, "text/html", getIndexHtml());
   });
   server.on("/move", HTTP_GET, [](AsyncWebServerRequest *req){
+    stepper.enableOutputs();
     abrt = 0;
     if(req->hasParam("pos")) {
       long pos = req->getParam("pos")->value().toInt(); // value in mm
@@ -205,7 +206,7 @@ void setup() {
     }
     if(req->hasParam("spd")) {
       int spd = req->getParam("spd")->value().toInt();
-      stepper.setMaxSpeed(0.5*spd * STEPS_PER_MM);
+      stepper.setMaxSpeed(0.3 * spd * STEPS_PER_MM);
       Serial.print("Set speed ");
       Serial.println(spd);
     }
@@ -257,28 +258,14 @@ void loop() {
     runHoming();              // finish homing operation
   }
 
-  // periodically report position and speed over Serial
-  static unsigned long lastPrint = 0;
-  if (millis() - lastPrint > 1000) {
-    float poscm = stepper.currentPosition() / (STEPS_PER_MM * 10.0) + home1PosCm;
-    float spd = stepper.speed() / STEPS_PER_MM;
-    Serial.print("Pos: ");
-    Serial.print(poscm, 2);
-    Serial.print(" cm Speed: ");
-    Serial.println(spd, 2);
-    Serial.print("off : ");
-    Serial.println(oflag);
-    lastPrint = millis();
+  if(stepper.distanceToGo() != 0 || stepper.isRunning()){
+    stepper.enableOutputs();
+    onDelay = millis();
+  }else{
+    if((onDelay + 4000) <= millis()){
+      stepper.disableOutputs();
+    }
   }
-
-  if(stepper.distanceToGo() !=0){
-     stepper.enableOutputs();
-     onDelay = millis();
-     oflag = 0;
-  }
-  else if((onDelay + 1000) <= millis()){
-    stepper.disableOutputs();
-    oflag = 1;
 }
 
 // Returns true if the given limit switch is pressed
@@ -288,16 +275,18 @@ bool switchHit(int pin){
 
 // Initiate homing toward switch n
 void startHome(int n){
+  stepper.enableOutputs();
   if(n==1) homeState = SEEK1;
   else if(n==2) homeState = SEEK2;
   else if(n==3) homeState = SEEK3;
   // slower speed for reliable homing
-  stepper.setMaxSpeed(50 * STEPS_PER_MM);
+  stepper.setMaxSpeed(30 * STEPS_PER_MM);
   stepper.setAcceleration(ACCEL_MM_S2 * STEPS_PER_MM);
 }
 
 // Execute the homing state machine
 void runHoming(){
+  stepper.enableOutputs();
   switch(homeState){
     case SEEK1: // search for switch 1
       stepper.moveTo(0);
@@ -325,6 +314,7 @@ void runHoming(){
 // Perform the full homing sequence on startup
 void fullHoming(){
   Serial.println("Starting Full Homing...");
+  stepper.enableOutputs();
 
   // run slow constant-speed homing toward switch 1
   stepper.setAcceleration(0); // disable acceleration for startup homing
