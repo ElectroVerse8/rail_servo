@@ -21,7 +21,7 @@ const int SW3_PIN = 19; // Home3
 // Mechanical parameters for the linear rail
 const float SCREW_LEAD_MM = 4.0;    // mm per revolution
 const int MOTOR_STEPS = 200;        // full steps per rev
-const int MICROSTEPS = 16;          // driver microstepping
+const int MICROSTEPS = 8;          // driver microstepping
 const float ACCEL_MM_S2 = 50.0;     // acceleration mm/s^2
 const float STEPS_PER_MM = (MOTOR_STEPS * MICROSTEPS) / SCREW_LEAD_MM;
 
